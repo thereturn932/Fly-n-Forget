@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import os
 import glob
+import math
 
 
 img_files = ['test5.jpg', 'test6.jpg', 'test7.jpg']
@@ -26,6 +27,7 @@ flann = cv2.FlannBasedMatcher(index_params, search_params)
 DIM=(1280, 720)
 K=np.array([[825.0763589590928, 0.0, 636.7751804064267], [0.0, 820.6514295548574, 352.12861013691986], [0.0, 0.0, 1.0]])
 D=np.array([[-0.057929442590365775], [-0.31759936963789637], [0.7760044711088516], [-0.6029921125137964]])
+tt = 0;
 
 while True:
     _,frame = cap.read()
@@ -102,25 +104,31 @@ while True:
             print(5)
             print(difference[0])
             print(difference[1])
+            
             if difference[0]<0:
-                cv2.putText(frame, 'go left', (10,450), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.putText(frame, 'go left', (10,450), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2, cv2.LINE_AA)
             elif difference[0]>0:
-                cv2.putText(frame, 'go right', (10,450), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.putText(frame, 'go right', (10,450), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2, cv2.LINE_AA)
             if difference[1]<0:
-                cv2.putText(frame, 'go up', (10,250), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.putText(frame, 'go up', (10,350), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2, cv2.LINE_AA)
             elif difference[1]>0:
-                cv2.putText(frame, 'go down', (10,250), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 255, 0), 2, cv2.LINE_AA)
+                cv2.putText(frame, 'go down', (10,350), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2, cv2.LINE_AA)
 
+            if tt == 1:
+                cv2.putText(frame, 'image changed', (10,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
+            out.write(frame)
             cv2.imshow("Homography", frame)
-            if difference[0]<20 and difference[1]<20:
+            if abs(difference[0])<20 and abs(difference[1])<20:
                 img = cv2.imread('test7.jpg',-1)
                 kp_image, desc_image = sift.detectAndCompute(img,None)
                 img = cv2.drawKeypoints(img,kp_image,img)
+                tt=1
+                
         except Exception as e:
             print(e)
 
     else:
-        out.write(grayframe)
+        out.write(frame)
         cv2.circle(frame, (320,240), 3, (255, 0, 0), 1)
         cv2.imshow("Homography", frame)
 
