@@ -4,141 +4,41 @@ import numpy as np
 import os
 import glob
 import math
+from ObjectFinder import find
+from PyQt5 import QtCore, QtGui, QtWidgets
+import sys
+import GUI
 
 
-img_files = ['test5.jpg', 'test6.jpg', 'test7.jpg']
+
+img_files = ['test4.jpg','test5.jpg', 'test6.jpg', 'test7.jpg']
 img_order = 0
-img = cv2.imread(img_files[img_order],-1)
 
+img = cv2.imread(img_files[img_order],-1)
 cap = cv2.VideoCapture(0)
 
-fourcc = cv2.VideoWriter_fourcc(*'XVID')
-out = cv2.VideoWriter('output.avi',fourcc, 20.0, (640,480))
-
-sift = cv2.xfeatures2d.SIFT_create()
-kp_image, desc_image = sift.detectAndCompute(img,None)
-img = cv2.drawKeypoints(img,kp_image,img)
-
-#matching
-index_params = dict(algorithm=0,trees = 5)
-search_params = dict()
-flann = cv2.FlannBasedMatcher(index_params, search_params)
 
 DIM=(1280, 720)
 K=np.array([[825.0763589590928, 0.0, 636.7751804064267], [0.0, 820.6514295548574, 352.12861013691986], [0.0, 0.0, 1.0]])
 D=np.array([[-0.057929442590365775], [-0.31759936963789637], [0.7760044711088516], [-0.6029921125137964]])
-tt = 0;
 
+
+if __name__ == '__main__':
+
+    app = QtWidgets.QApplication(sys.argv)
+    MainWindow = QtWidgets.QMainWindow()
+    ui = GUI.Ui_MainWindow()
+    ui.setupUi(MainWindow)
+    MainWindow.show()
+    sys.exit(app.exec_())
+
+
+'''
 while True:
-    _,frame = cap.read()
-    h,w = frame.shape[:2]
-    map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, DIM, cv2.CV_16SC2)
-    undistorted_img = cv2.remap(frame, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
-    grayframe = cv2.cvtColor(undistorted_img, cv2.COLOR_BGR2GRAY)
-    #grayframe = frame
-    kp_grayframe, desc_grayframe = sift.detectAndCompute(grayframe,None)
-    grayframe = cv2.drawKeypoints(grayframe, kp_grayframe, grayframe)
-    try:
-        matches = flann.knnMatch(desc_image, desc_grayframe, k=2)
-    except Exception as e:
-        print(e)
-        matches = []
-    good_points=[]
-    for m,n in matches:
-        if m.distance < 0.85*n.distance:
-            good_points.append(m)
+        if find(img, cap, DIM, K ,D) == True:
+            img_order += 1
 
-    #homography
-    if len(good_points) > 10:
-        query_points = np.float32([kp_image[m.queryIdx].pt for m in good_points]).reshape(-1,1,2)
-        train_pts = np.float32([kp_grayframe[m.trainIdx].pt for m in good_points]).reshape(-1,1,2)
-
-        matrix = np.array([])
-
-        matrix, mask = cv2.findHomography(query_points, train_pts, cv2.RANSAC, 5.0)
-        matches_mask = mask.ravel().tolist()
-
-        h, w = img.shape[:-1]
-        pts = np.float32([[0, 0], [0, h-1], [w-1, h-1], [w-1, 0]]).reshape(-1, 1, 2)
-        
-
-        try:
-            if not matrix.size == 0:
-                dst = cv2.perspectiveTransform(pts, matrix)
-            #homography = cv2.polylines(frame, [np.int32(dst)], True, (255, 0, 0), 3)
-            print(dst)
-            dst_1 = tuple(np.int32(dst[0]))
-            a = dst_1[0]
-            pt_1 = (a[0],a[1])
-
-            dst_2 = tuple(np.int32(dst[1]))
-            b = dst_2[0]
-            pt_2 = (b[0],b[1])
-
-            dst_3 = tuple(np.int32(dst[2]))
-            c = dst_3[0]
-            pt_3 = (c[0],c[1])
-
-            dst_4 = tuple(np.int32(dst[3]))
-            d = dst_4[0]
-            pt_4 = (d[0],d[1])
-
-            crn_1 = (np.int32((a[0]+b[0])/2),np.int32((a[1]+b[1])/2))
-            crn_2 = (np.int32((c[0]+d[0])/2),np.int32((c[1]+d[1])/2))
-
-            cv2.rectangle(frame, crn_1, crn_2, (255, 0, 0), 3)
-            rect1center = ((168+2)/2, (95+20)/2)
-            rect2center = ((366+40)/2, (345+522)/2)
-            center = ((crn_1[0]+crn_2[0])/2,(crn_1[1]+crn_2[1])/2)
-            m = np.int32(center[0])
-            n = np.int32(center[1])
-            i = (m,n)
-            cv2.circle(frame, i, 3, (255, 0, 0), 1)
-            print(frame.shape)
-            out.write(frame)
-
-            print(4)
-            cv2.circle(frame, (320,240), 3, (255, 0, 0), 1)
-            cv2.line(frame, i, (320,240), (255, 0, 0), 1)
-            difference = (i[0]-320,i[1]-240)
-            print(5)
-            print(difference[0])
-            print(difference[1])
-            
-            if difference[0]<0:
-                cv2.putText(frame, 'go left', (10,450), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2, cv2.LINE_AA)
-            elif difference[0]>0:
-                cv2.putText(frame, 'go right', (10,450), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 0, 0), 2, cv2.LINE_AA)
-            if difference[1]<0:
-                cv2.putText(frame, 'go up', (10,350), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2, cv2.LINE_AA)
-            elif difference[1]>0:
-                cv2.putText(frame, 'go down', (10,350), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 2, cv2.LINE_AA)
-
-            if tt == 1:
-                cv2.putText(frame, 'image changed', (10,50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
-            out.write(frame)
-            cv2.imshow("Homography", frame)
-            if abs(difference[0])<20 and abs(difference[1])<20:
-                img = cv2.imread('test7.jpg',-1)
-                kp_image, desc_image = sift.detectAndCompute(img,None)
-                img = cv2.drawKeypoints(img,kp_image,img)
-                tt=1
-                
-        except Exception as e:
-            print(e)
-
-    else:
-        out.write(frame)
-        cv2.circle(frame, (320,240), 3, (255, 0, 0), 1)
-        cv2.imshow("Homography", frame)
-
-
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-cap.release()
-out.release()
-cv2.destroyAllWindows()
-
+            cap.release()
+            cv2.destroyAllWindows()
+'''
 
