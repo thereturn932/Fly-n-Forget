@@ -106,8 +106,11 @@ def find(img, cap, DIM, K, D):
 
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
-                return False
+                cv2.destroyAllWindows()
+                break
 
+    cap.release()
+    cv2.destroyAllWindows()
 
 
 
